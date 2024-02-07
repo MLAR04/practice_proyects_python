@@ -1,8 +1,13 @@
 import asyncio
 import aiohttp
 import flet as ft
+
+#GLOBAL
 block_width = 600 
 block_height = 900
+first_pokemon = 1
+number_pokemon = 0
+limit = 151
 
 async def main(page: ft.page):
     #CONFIG WINDOW
@@ -21,27 +26,76 @@ async def main(page: ft.page):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 return await response.json()
+    #UP-DOWN POKEMON
+    async def get_pokemon(e : ft.ContainerTapEvent):
+        global number_pokemon
+        global first_pokemon
+        global limit
+
+        if e.control == up_arrow:
+            number_pokemon = number_pokemon + 1
+        else:
+            number_pokemon= number_pokemon - 1
+        
+        if number_pokemon > limit:
+            number_pokemon = first_pokemon
+        number = (number_pokemon%limit)
+        if number < first_pokemon:
+            number = number_pokemon = limit
+ 
+        result = await request_API(f"https://pokeapi.co/api/v2/pokemon/{number}")
+        habilitys = ""
+        types = ""
+        for hability in result['abilities']:
+            habilitys += f"     - {hability['ability']['name']}\n" 
+        for poke_type in result['types']:
+            types += f"- {poke_type['type']['name']} "
+        poke_heigth = float((result['height']*10)/100)
+        entry_response = await request_API(f"https://pokeapi.co/api/v2/pokemon-species/{number}/")
+        description = entry_response["flavor_text_entries"][0]["flavor_text"].replace("\f","\n").replace("\n"," ")
+        pokemon_data.value = f"Number: {number} ~ Name: {result['name']}\n~ Types : {types}- ~ Height: {poke_heigth} mts.\n~ Habilities: \n{habilitys}~ Description: \n{description}"
+        sprite_url = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{number}.png"
+        center_image.src = sprite_url
+        await page.update_async()
     
-    async def void_event(e : ft.ContainerTapEvent):
-        print("click")
+    async def get_generation(e: ft.ContainerTapEvent):
+        global number_pokemon
+        global first_pokemon
+        global limit
+
+        if e.control == kanto:
+            first_pokemon = 1
+            number_pokemon = 1
+            limit = 151
+        elif e.control == johto:
+            first_pokemon = 152
+            number_pokemon = 152
+            limit =  251
+        else:
+            first_pokemon = 252
+            number_pokemon = 252
+            limit = 386
+        
     #TOP POKEDEX 4 Circles(Blue, red, yellow and green)
     blue_button= ft.Stack([
         ft.Container(width=50, height=50, bgcolor=ft.colors.WHITE ,border_radius=50),
         ft.Container(width=40, height=40, left =5 , top=5, bgcolor=ft.colors.BLUE, border_radius=50)
     ])
+    kanto = ft.Container(width=20, height=20, bgcolor=ft.colors.RED_200 , border_radius=50, on_click=get_generation)
+    johto = ft.Container(width=20, height=20, bgcolor=ft.colors.YELLOW , border_radius=50, on_click=get_generation)
+    hoenn = ft.Container(width=20, height=20,bgcolor=ft.colors.GREEN , border_radius=50, on_click=get_generation)
     items_header = [
         ft.Container(blue_button, width=50, height=50),
-        ft.Container(width=20, height=20, bgcolor=ft.colors.RED_200 , border_radius=50),
-        ft.Container(width=20, height=20, bgcolor=ft.colors.YELLOW , border_radius=50),
-        ft.Container(width=20, height=20,bgcolor=ft.colors.GREEN , border_radius=50),
+        kanto,johto,hoenn,
     ]
     header= ft.Container(content=ft.Row(items_header),width=600,height=50, margin=ft.margin.only(left =10 , top=10))
     #MIDLE POKEDEX A Window to show the pokemon image  
+    sprite_url = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
     center_image = ft.Image(
-                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png",
+                src=sprite_url,
                 scale=15, # Redimensionamos a tamano muy grande
-                width=30, #Con esto se reescalara a un tamano inferior automaticamente
-                height=30,
+                width=18, #Con esto se reescalara a un tamano inferior automaticamente
+                height=18,
                 top=300/2,
                 right=500/2,
     )
@@ -67,22 +121,22 @@ async def main(page: ft.page):
         width=80,
         height=50,
     )
-    up_arrow = ft.Container(arrow_shape, width=80, height=50, on_click=void_event)#_get_pokemon)
+    up_arrow = ft.Container(arrow_shape, width=80, height=50, on_click=get_pokemon)
     arrows = ft.Column(
         [
             up_arrow,
-             #rad 180 grads = 3.14159
-            ft.Container(up_arrow, width=80, height=50, rotate=ft.Rotate(angle=3.14159),), #on_click=evento_get_pokemon),
+            #rad 180 grads = 3.14159
+            ft.Container(arrow_shape, width=80, height=50, rotate=ft.Rotate(angle=3.14159),on_click=get_pokemon),
         ]
     )
     pokemon_data = ft.Text(
-        value="In This box is goin to show the text with the pokemon data",
+        value="Welcome!!!, I'm Your asistent in your road to be the best Pokemón Master",
         color=ft.colors.BLACK,
         size=16 
         )
     items_bottom =[
-        ft.Container(width=25), #Margen izquierdos
-        ft.Container(pokemon_data, padding=10, width=400, height=300, bgcolor=ft.colors.GREEN, border_radius=20),
+        ft.Container(width=20), #Margen izquierdos
+        ft.Container(pokemon_data, padding=10, width=430, height=330, bgcolor=ft.colors.GREEN, border_radius=20),
         ft.Container(width=5), #Margen derecho
         ft.Container(arrows, width=80, height=120),
     ]
@@ -105,7 +159,8 @@ async def main(page: ft.page):
         alignment=ft.alignment.top_center
     )
     
-    #ADD
+    #RUN
     await page.add_async(contenedor)
+    #get_generation()
 
 ft.app(target=main)
